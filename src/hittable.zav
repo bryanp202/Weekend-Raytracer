@@ -1,0 +1,143 @@
+use ::ray::Ray;
+use ::vec3::Vec3;
+use ::std::collections::list::List;
+
+pub struct HitRecord {
+    p: Vec3;
+    normal: Vec3;
+    t: f64;
+    front_face: bool;
+
+    pub fn set_face_normal(self: *HitRecord, ray: *const Ray, outward_normal: *const Vec3) void {
+        self.front_face = ray.dir.dot(outward_normal) < 0;
+        self.normal = self.front_face ? outward_normal.* : outward_normal.neg(); 
+    }
+}
+
+pub struct Hittable {
+    ptr: *void;
+    hitFn: fn(*const void,*const Ray,f64,f64,*HitRecord)bool;
+    freeFn: fn(*const void)void;
+
+    pub fn hit(
+        self: *const Hittable,
+        r: *const Ray,
+        ray_tmin: f64,
+        ray_tmax: f64,
+        hit_record: *HitRecord
+    ) bool {
+        return (self as *fn(*const void,*const Ray,f64,f64,*HitRecord)bool)[1](
+            self.ptr,
+            r,
+            ray_tmin,
+            ray_tmax,
+            hit_record
+        );
+    }
+
+    pub fn free(self: *const Hittable) void {
+        (self as *fn(*const void)bool)[2](self.ptr);
+        @free(self.ptr);
+    }
+}
+
+pub struct Sphere {
+    center: Vec3;
+    radius: f64;
+
+    pub fn new(center: Vec3, radius: f64) Sphere {
+        var sphere: Sphere = undefined;
+        sphere.center = center;
+        sphere.radius = radius >= 0 ? radius : 0;
+        return sphere;
+    }
+
+    pub fn free(self: *const Sphere) void {}
+
+    pub fn hittable(self: *const Sphere) Hittable {
+        const sphere = @malloc(@sizeof(self.*)) as *Sphere;
+        sphere.* = self.*;
+
+        var hittable: Hittable = undefined;
+        hittable.ptr = sphere as *void;
+        hittable.hitFn = Sphere::hit as fn(*const void,*const Ray,f64,f64,*HitRecord)bool;
+        hittable.freeFn = Sphere::free as fn(*const void)void;
+        return hittable;
+    }
+
+    fn hit(self: *const Sphere, r: *const Ray, ray_tmin: f64, ray_tmax: f64, rec: *HitRecord) bool {
+        const oc = self.center.sub(&r.orig);
+        const a = r.dir.len_squared();
+        const h = r.dir.dot(&oc);
+        const c = oc.len_squared() - self.radius*self.radius;
+        const discriminant = h*h - a*c;
+
+        if (discriminant < 0) {
+            return false;
+        }
+        
+        const sqrtd = @sqrtf64(discriminant);
+        var root = (h - sqrtd) / a;
+        if (root <= ray_tmin or ray_tmax <= root) {
+            root = (h + sqrtd) / a;
+            if (root <= ray_tmin or ray_tmax <= root) {
+                return false;
+            }
+        }
+
+        rec.t = root;
+        rec.p = r.at(root);
+        const outward_normal = rec.p.sub(&self.center).divs(self.radius);
+        rec.set_face_normal(r, &outward_normal);
+        return true;
+    }
+}
+
+pub struct HittableList {
+    objects: List<Hittable>;
+
+    pub fn new() HittableList {
+        var list: HittableList = undefined;
+        list.objects = List::<Hittable>::new();
+        return list;
+    }
+
+    pub fn free(self: *const HittableList) void {
+        for (0..self.objects.len, self.objects.items) |_, obj| {
+            obj.free();
+        }
+        self.objects.free();
+    }
+
+    pub fn add(self: *HittableList, hittable: Hittable) HittableList {
+        self.objects.push(hittable);
+        return self.*;
+    }
+
+    pub fn hittable(self: *const HittableList) Hittable {
+        const list = @malloc(@sizeof(self.*)) as *HittableList;
+        list.* = self.*;
+
+        var hittable: Hittable = undefined;
+        hittable.ptr = list as *void;
+        hittable.hitFn = HittableList::hit as fn(*const void,*const Ray,f64,f64,*HitRecord)bool;
+        hittable.freeFn = HittableList::free as fn(*const void)void;
+        return hittable;
+    }
+
+    fn hit(self: *const HittableList, r: *const Ray, ray_tmin: f64, ray_tmax: f64, rec: *HitRecord) bool {
+        var temp_rec: HitRecord = undefined;
+        var hit_anything = false;
+        var closest_so_far = ray_tmax;
+
+        for (0..self.objects.len, self.objects.items) |_, obj| {
+            if (obj.hit(r, ray_tmin, closest_so_far, &temp_rec)) {
+                hit_anything = true;
+                closest_so_far = temp_rec.t;
+                rec.* = temp_rec;
+            }
+        }
+
+        return hit_anything;
+    }
+}

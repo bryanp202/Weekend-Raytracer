@@ -1,0 +1,23 @@
+pub struct Rng {
+    state: u64;
+    inc: u64;
+
+    pub fn new(seed_lower: u64, seed_upper: u64) Rng {
+        var rng: Rng = undefined;
+        rng.state = 0 as u64;
+        rng.inc = seed_upper << 1 | 1;
+        rng.gen();
+        rng.state = rng.state + seed_lower;
+        rng.gen();
+        return rng;
+    }
+
+    pub fn gen(self: *Rng) i32 {
+        const old = self.state;
+        self.state = old * 6364136223846793005 as u64 + self.inc;
+        const xor = (((old >> 18) ^ old) >> 27) as u32;
+        const rot = old >> 59 as u32;
+        const out = (xor >> rot) | (xor << ((-rot) & 31)) as i32;
+        return out;
+    }
+}
