@@ -80,10 +80,10 @@ pub struct Camera {
             thread_start = temp.max;
             const arg = @malloc(@sizeof(temp)) as *RenderThreadArgs;
             arg.* = temp;
-
+          
+            const handle = @spawn_thread(Camera::render_worker, arg as *void);
+            threads.push(handle);
             args.push(arg as *void);
-            
-            @spawn_thread(Camera::render_worker, arg as *void);
         }
     
         for (thread_start..self.image_height) |j| {
@@ -101,6 +101,7 @@ pub struct Camera {
         @printf("\rDone                  \n");
 
         for (0..threads.len, threads.items) |i, thread| {
+            @printf("Done\n");
             @join(thread.*);
             @free(args.items[i]);
         }
