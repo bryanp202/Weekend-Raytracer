@@ -1,0 +1,23 @@
+pub struct Interval {
+    min: f64;
+    max: f64;
+
+    pub fn new(min: f64, max: f64) Interval {
+        var interval: Interval = undefined;
+        interval.min = min;
+        interval.max = max;
+        return interval;
+    }
+
+    pub fn size(self: *const Interval) f64 {
+        return self.max - self.min;
+    }
+
+    pub fn contains(self: *const Interval, x: f64) bool {
+        return self.min <= x and x <= self.max;
+    }
+
+    pub fn surrounds(self: *const Interval, x: f64) bool {
+        return self.min < x and x < self.max;
+    }
+}

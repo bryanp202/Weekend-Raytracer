@@ -38,7 +38,7 @@ pub struct Image {
         return image;
     }
 
-    pub fn deinit(self: *const Image) void {
+    pub fn free(self: *const Image) void {
         @free(self.buf);
     }
 

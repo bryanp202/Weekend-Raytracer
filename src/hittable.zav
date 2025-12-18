@@ -1,5 +1,6 @@
 use ::ray::Ray;
 use ::vec3::Vec3;
+use ::interval::Interval;
 use ::std::collections::list::List;
 
 pub struct HitRecord {
@@ -16,21 +17,19 @@ pub struct HitRecord {
 
 pub struct Hittable {
     ptr: *void;
-    hitFn: fn(*const void,*const Ray,f64,f64,*HitRecord)bool;
+    hitFn: fn(*const void,*const Ray,Interval,*HitRecord)bool;
     freeFn: fn(*const void)void;
 
     pub fn hit(
         self: *const Hittable,
         r: *const Ray,
-        ray_tmin: f64,
-        ray_tmax: f64,
+        ray_t: Interval,
         hit_record: *HitRecord
     ) bool {
-        return (self as *fn(*const void,*const Ray,f64,f64,*HitRecord)bool)[1](
+        return (self as *fn(*const void,*const Ray,Interval,*HitRecord)bool)[1](
             self.ptr,
             r,
-            ray_tmin,
-            ray_tmax,
+            ray_t,
             hit_record
         );
     }
@@ -60,12 +59,12 @@ pub struct Sphere {
 
         var hittable: Hittable = undefined;
         hittable.ptr = sphere as *void;
-        hittable.hitFn = Sphere::hit as fn(*const void,*const Ray,f64,f64,*HitRecord)bool;
+        hittable.hitFn = Sphere::hit as fn(*const void,*const Ray,Interval,*HitRecord)bool;
         hittable.freeFn = Sphere::free as fn(*const void)void;
         return hittable;
     }
 
-    fn hit(self: *const Sphere, r: *const Ray, ray_tmin: f64, ray_tmax: f64, rec: *HitRecord) bool {
+    fn hit(self: *const Sphere, r: *const Ray, ray_t: Interval, rec: *HitRecord) bool {
         const oc = self.center.sub(&r.orig);
         const a = r.dir.len_squared();
         const h = r.dir.dot(&oc);
@@ -78,9 +77,9 @@ pub struct Sphere {
         
         const sqrtd = @sqrtf64(discriminant);
         var root = (h - sqrtd) / a;
-        if (root <= ray_tmin or ray_tmax <= root) {
+        if (!ray_t.surrounds(root)) {
             root = (h + sqrtd) / a;
-            if (root <= ray_tmin or ray_tmax <= root) {
+            if (!ray_t.surrounds(root)) {
                 return false;
             }
         }
@@ -120,20 +119,20 @@ pub struct HittableList {
 
         var hittable: Hittable = undefined;
         hittable.ptr = list as *void;
-        hittable.hitFn = HittableList::hit as fn(*const void,*const Ray,f64,f64,*HitRecord)bool;
+        hittable.hitFn = HittableList::hit as fn(*const void,*const Ray,Interval,*HitRecord)bool;
         hittable.freeFn = HittableList::free as fn(*const void)void;
         return hittable;
     }
 
-    fn hit(self: *const HittableList, r: *const Ray, ray_tmin: f64, ray_tmax: f64, rec: *HitRecord) bool {
+    fn hit(self: *const HittableList, r: *const Ray, ray_t: Interval, rec: *HitRecord) bool {
         var temp_rec: HitRecord = undefined;
         var hit_anything = false;
-        var closest_so_far = ray_tmax;
+        var temp_t = ray_t;
 
         for (0..self.objects.len, self.objects.items) |_, obj| {
-            if (obj.hit(r, ray_tmin, closest_so_far, &temp_rec)) {
+            if (obj.hit(r, temp_t, &temp_rec)) {
                 hit_anything = true;
-                closest_so_far = temp_rec.t;
+                temp_t.max = temp_rec.t;
                 rec.* = temp_rec;
             }
         }

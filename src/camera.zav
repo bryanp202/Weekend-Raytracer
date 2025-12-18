@@ -1,0 +1,161 @@
+use ::std::image::Image;
+use ::std::image::Color;
+use ::std::math;
+use ::std::result::Result;
+use ::std::io::IOError;
+use ::std::collections::list::List;
+
+use ::vec3::Vec3;
+use ::ray::Ray;
+use ::hittable::Hittable;
+use ::hittable::HitRecord;
+use ::interval::Interval;
+
+pub struct Camera {
+    aspect_ratio: f64;
+    image_width: i64;
+    image_height: i64;
+    center: Vec3;
+    pixel00_loc: Vec3;
+    pixel_delta_u: Vec3;
+    pixel_delta_v: Vec3;
+
+    pub fn new(
+        image_width: i64,
+        aspect_ratio: f64,
+        viewport_height: f64,
+        focal_length: f64
+    ) Camera {
+        var self: Camera = undefined;
+        self.aspect_ratio = aspect_ratio;
+        self.image_width = image_width;
+        self.image_height = math::max_i64(1, (image_width / aspect_ratio) as i64);
+
+        const viewport_height = viewport_height;
+        const viewport_width = viewport_height * (image_width as f64 / self.image_height as f64);
+        self.center = Vec3::new(0.0, 0.0, 0.0);
+
+        // Calculate the vectors across the horizontal and down the vertical viewport edges
+        const viewport_u = Vec3::new(viewport_width, 0.0, 0.0);
+        const viewport_v = Vec3::new(0.0, -viewport_height, 0.0);
+
+        // Calculate the horizontal and vertical delta vectors from pixel to pixel
+        self.pixel_delta_u = viewport_u.divs(image_width);
+        self.pixel_delta_v = viewport_v.divs(self.image_height);
+
+        // Calculate the position of the upper left pixel
+        const viewport_upper_left = self.center
+            .sub(&Vec3::new(0.0, 0.0, focal_length))
+            .sub(&viewport_u.divs(2.0))
+            .sub(&viewport_v.divs(2.0));
+        self.pixel00_loc = viewport_upper_left
+            .add(&self.pixel_delta_u.add(&self.pixel_delta_v).muls(0.5));
+
+        return self;
+    }
+
+    pub fn render(self: *const Camera, world: *const Hittable, filename: *const u8, thread_count: i64) Result<i64, IOError> {
+        const img = Image::new(self.image_width as u32, self.image_height as u32);
+        defer img.free();
+
+        var threads = List::<i64>::new();
+        defer threads.free();
+        var args = List::<*void>::new();
+        defer args.free();
+
+        const interval = thread_count < 2 ? 0 : self.image_height / thread_count;
+        var thread_start = 0;
+        for (1..thread_count) |i| {
+            var temp: RenderThreadArgs = undefined;
+            temp.camera = self;
+            temp.world = world;
+            temp.img = &img;
+            temp.min = thread_start;
+            temp.max = thread_start + interval;
+            thread_start = temp.max;
+            const arg = @malloc(@sizeof(temp)) as *RenderThreadArgs;
+            arg.* = temp;
+            
+            args.push(arg as *void);
+
+            @spawn_thread(
+                Camera::worker,
+                arg as *void
+            );
+        }
+    
+        for (thread_start..self.image_height) |j| {
+            @printf("\rScanlines remaining: %d ", self.image_height - j);
+            for (0..self.image_width) |i| {
+                const pixel_center = self.pixel00_loc
+                    .add(&self.pixel_delta_u.muls(i))
+                    .add(&self.pixel_delta_v.muls(j));
+                const ray_direction = pixel_center.sub(&self.center);
+                const ray = Ray::new(self.center, ray_direction);
+                const pixel_color = self.ray_color(&ray, world);
+                draw_color(&img, i, j, pixel_color);
+            }
+        }
+        @printf("\rDone                  \n");
+
+        for (0..threads.len, threads.items) |i, thread| {
+            @join(thread.*);
+            @free(args.items[i]);
+        }
+
+        @fdelete(filename);
+        return img.export_bmp(filename);
+    }
+
+
+    /////////////
+    // Helpers //
+    /////////////
+    fn ray_color(self: *const Camera, r: *const Ray, world: *const Hittable) Vec3 {
+        var rec: HitRecord = undefined;
+        if (world.hit(r, Interval::new(0.0, ::INFINITY), &rec)) {
+            return Vec3::new(rec.normal.x / 2.0 + 0.5, rec.normal.y / 2.0 + 0.5, rec.normal.z / 2.0 + 0.5);
+        }
+
+        const unit_direction = r.dir.unit_vector();
+        const a = 0.5*(unit_direction.y + 1.0);
+        const a_1 = 1.0 - a;
+        return Vec3::new(a_1 + a*0.5, a_1 + a*0.7, a_1 + a);
+    }
+
+    fn worker(thread_args: *void) i64 {
+        const args = thread_args as *RenderThreadArgs;
+        const camera = args.camera;
+        for (args.min..args.max) |j| {
+            for (0..camera.image_width) |i| {
+                const pixel_center = camera.pixel00_loc
+                    .add(&camera.pixel_delta_u.muls(i))
+                    .add(&camera.pixel_delta_v.muls(j));
+                const ray_direction = pixel_center.sub(&camera.center);
+                const ray = Ray::new(camera.center, ray_direction);
+                const pixel_color = camera.ray_color(&ray, args.world);
+                draw_color(args.img, i, j, pixel_color);
+            }
+        }
+
+        return 0;
+    }
+}
+
+fn draw_color(img: *const Image, x: i64, y: i64, pixel_color: Vec3) void {
+    const color = Color::new(
+        @floor(255.999 * pixel_color.x) as void as f64 as i64,
+        @floor(255.999 * pixel_color.y) as void as f64 as i64,
+        @floor(255.999 * pixel_color.z) as void as f64 as i64,
+        255
+    );
+    img.set_pixel(color, x, y);
+}
+
+struct RenderThreadArgs {
+    camera: *const Camera;
+    world: *const Hittable;
+    img: *const Image;
+    min: i64;
+    max: i64;
+}
