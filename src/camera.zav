@@ -54,7 +54,12 @@ pub struct Camera {
         return self;
     }
 
-    pub fn render(self: *const Camera, world: *const Hittable, filename: *const u8, thread_count: i64) Result<i64, IOError> {
+    pub fn render(
+        self: *const Camera,
+        world: *const Hittable,
+        filename: *const u8,
+        thread_count: i64
+    ) Result<i64, IOError> {
         const img = Image::new(self.image_width as u32, self.image_height as u32);
         defer img.free();
 
