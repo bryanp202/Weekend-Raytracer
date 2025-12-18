@@ -75,13 +75,10 @@ pub struct Camera {
             thread_start = temp.max;
             const arg = @malloc(@sizeof(temp)) as *RenderThreadArgs;
             arg.* = temp;
-            
-            args.push(arg as *void);
 
-            @spawn_thread(
-                Camera::worker,
-                arg as *void
-            );
+            args.push(arg as *void);
+            
+            @spawn_thread(Camera::render_worker, arg as *void);
         }
     
         for (thread_start..self.image_height) |j| {
@@ -123,7 +120,7 @@ pub struct Camera {
         return Vec3::new(a_1 + a*0.5, a_1 + a*0.7, a_1 + a);
     }
 
-    fn worker(thread_args: *void) i64 {
+    fn render_worker(thread_args: *void) i64 {
         const args = thread_args as *RenderThreadArgs;
         const camera = args.camera;
         for (args.min..args.max) |j| {
