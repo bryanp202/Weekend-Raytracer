@@ -21,6 +21,7 @@ pub const PI: f64 = 3.1415926535897932385;
 pub const INFINITY: f64 = 1.7976931348623157e+308 + 1.7976931348623157e+308;
 pub const INTERVAL_EMPTY: Interval = Interval::new(INFINITY, -INFINITY);
 pub const INTERVAL_UNIVERSE: Interval = Interval::new(-INFINITY, INFINITY);
+pub const PIXEL_INTENSITY: Interval = Interval::new(0.0, 0.999);
 pub fn degrees_to_radians(degrees: f64) f64 {
     return degrees * PI / 180.0;
 }
@@ -34,9 +35,7 @@ const WORKER_THREADS: i64 = 4;
 
 fn main(argc: i64, argv: **const u8) i64 {
     const start = @nanoTimestamp();
-    defer {
-        @printf("Time to run: %f secs", (@nanoTimestamp() - start) / 1_000_000_000.0);
-    }
+    defer @printf("Time to run: %f secs", (@nanoTimestamp() - start) / 1_000_000_000.0);
 
     const camera = Camera::new(IMAGE_WIDTH, ASPECT_RATIO, VIEWPORT_HEIGHT, FOCAL_LENGTH);
 
@@ -45,8 +44,6 @@ fn main(argc: i64, argv: **const u8) i64 {
         .add(hittable::Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0).hittable())
         .add(hittable::Sphere::new(Vec3::new(10.0, 6.0, -5.2), 5.0).hittable())
         .add(hittable::Sphere::new(Vec3::new(-0.8, 0.5, -0.9), 0.25).hittable())
-        //.add(hittable::Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0).hittable())
-        //.add(hittable::Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0).hittable())
         .hittable();
     defer world.free();
 

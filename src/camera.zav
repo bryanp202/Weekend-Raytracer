@@ -147,9 +147,9 @@ pub struct Camera {
 
 fn draw_color(img: *const Image, x: i64, y: i64, pixel_color: Vec3) void {
     const color = Color::new(
-        @floor(255.999 * pixel_color.x) as void as f64 as i64,
-        @floor(255.999 * pixel_color.y) as void as f64 as i64,
-        @floor(255.999 * pixel_color.z) as void as f64 as i64,
+        @floor(255.999 * ::PIXEL_INTENSITY.clamp(pixel_color.x)) as void as f64 as i64,
+        @floor(255.999 * ::PIXEL_INTENSITY.clamp(pixel_color.y)) as void as f64 as i64,
+        @floor(255.999 * ::PIXEL_INTENSITY.clamp(pixel_color.z)) as void as f64 as i64,
         255
     );
     img.set_pixel(color, x, y);

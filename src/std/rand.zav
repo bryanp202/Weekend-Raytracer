@@ -6,18 +6,26 @@ pub struct Rng {
         var rng: Rng = undefined;
         rng.state = 0 as u64;
         rng.inc = seed_upper << 1 | 1;
-        rng.gen();
+        rng.gen_i32();
         rng.state = rng.state + seed_lower;
-        rng.gen();
+        rng.gen_i32();
         return rng;
     }
 
-    pub fn gen(self: *Rng) i32 {
+    pub fn gen_i32(self: *Rng) i32 {
         const old = self.state;
         self.state = old * 6364136223846793005 as u64 + self.inc;
         const xor = (((old >> 18) ^ old) >> 27) as u32;
         const rot = old >> 59 as u32;
         const out = (xor >> rot) | (xor << ((-rot) & 31)) as i32;
         return out;
+    }
+
+    pub fn gen_f64(self: *Rng) f64 {
+        return self.gen_i32() / 4_294_967_294.0 + 0.5;
+    }
+
+    pub fn range_f64(self: *Rng, min: f64, max: f64) f64 {
+        return min + (max-min)*self.gen_f64();
     }
 }
