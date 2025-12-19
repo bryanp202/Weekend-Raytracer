@@ -4,6 +4,7 @@ use ::std::math;
 use ::std::result::Result;
 use ::std::io::IOError;
 use ::std::collections::list::List;
+use ::std::rand::Rng;
 
 use ::vec3::Vec3;
 use ::ray::Ray;
@@ -19,12 +20,17 @@ pub struct Camera {
     pixel00_loc: Vec3;
     pixel_delta_u: Vec3;
     pixel_delta_v: Vec3;
+    samples_per_pixel: i64;
+    pixel_samples_scale: f64;
+    max_depth: i64;
 
     pub fn new(
         image_width: i64,
         aspect_ratio: f64,
         viewport_height: f64,
-        focal_length: f64
+        focal_length: f64,
+        samples_per_pixel: i64,
+        max_depth: i64
     ) Camera {
         var self: Camera = undefined;
         self.aspect_ratio = aspect_ratio;
@@ -50,6 +56,10 @@ pub struct Camera {
             .sub(&viewport_v.divs(2.0));
         self.pixel00_loc = viewport_upper_left
             .add(&self.pixel_delta_u.add(&self.pixel_delta_v).muls(0.5));
+
+        self.samples_per_pixel = samples_per_pixel;
+        self.pixel_samples_scale = 1.0 / samples_per_pixel;
+        self.max_depth = max_depth;
 
         return self;
     }
@@ -86,16 +96,11 @@ pub struct Camera {
             args.push(arg as *void);
         }
     
+        var rng = Rng::new(@nanoTimestamp(), @nanoTimestamp());
         for (thread_start..self.image_height) |j| {
             @printf("\rScanlines remaining: %d ", self.image_height - j);
             for (0..self.image_width) |i| {
-                const pixel_center = self.pixel00_loc
-                    .add(&self.pixel_delta_u.muls(i))
-                    .add(&self.pixel_delta_v.muls(j));
-                const ray_direction = pixel_center.sub(&self.center);
-                const ray = Ray::new(self.center, ray_direction);
-                const pixel_color = self.ray_color(&ray, world);
-                draw_color(&img, i, j, pixel_color);
+                self.draw_pixel(&img, world, i, j, &rng);
             }
         }
         @printf("\rDone                  \n");
@@ -114,10 +119,34 @@ pub struct Camera {
     /////////////
     // Helpers //
     /////////////
-    fn ray_color(self: *const Camera, r: *const Ray, world: *const Hittable) Vec3 {
+    fn draw_pixel(self: *const Camera, img: *const Image, world: *const Hittable, i: i64, j: i64, rng: *Rng) void {
+        var pixel_color = Vec3::new(0.0, 0.0, 0.0);
+        for (0..self.samples_per_pixel) |_| {
+            const r = self.get_ray(i, j, rng);
+            const c = self.ray_color(&r, self.max_depth, world, rng);
+            pixel_color.x += c.x;
+            pixel_color.y += c.y;
+            pixel_color.z += c.z;
+        }
+
+        const color = Color::new(
+            @floor(256.0 * ::PIXEL_INTENSITY.clamp(pixel_color.x * self.pixel_samples_scale)) as void as f64 as i64,
+            @floor(256.0 * ::PIXEL_INTENSITY.clamp(pixel_color.y * self.pixel_samples_scale)) as void as f64 as i64,
+            @floor(256.0 * ::PIXEL_INTENSITY.clamp(pixel_color.z * self.pixel_samples_scale)) as void as f64 as i64,
+            255
+        );
+        img.set_pixel(color, i, j);
+    }
+
+    fn ray_color(self: *const Camera, r: *const Ray, depth: i64, world: *const Hittable, rng: *Rng) Vec3 {
+        if (depth <= 0)
+            return Vec3::new(0.0, 0.0, 0.0);
+
         var rec: HitRecord = undefined;
         if (world.hit(r, Interval::new(0.0, ::INFINITY), &rec)) {
-            return Vec3::new(rec.normal.x / 2.0 + 0.5, rec.normal.y / 2.0 + 0.5, rec.normal.z / 2.0 + 0.5);
+            const dir = Vec3::random_on_hemisphere(rng, &rec.normal);
+            const new_r = Ray::new(rec.p, dir);
+            return self.ray_color(&new_r, depth-1, world, rng).muls(0.5);
         }
 
         const unit_direction = r.dir.unit_vector();
@@ -126,33 +155,32 @@ pub struct Camera {
         return Vec3::new(a_1 + a*0.5, a_1 + a*0.7, a_1 + a);
     }
 
+    fn get_ray(self: *const Camera, i: i64, j: i64, rng: *Rng) Ray {
+        const offset = self.sample_square(rng);
+        const pixel_sample = self.pixel00_loc
+            .add(&self.pixel_delta_u.muls(i + offset.x))
+            .add(&self.pixel_delta_v.muls(j + offset.y));
+        return Ray::new(self.center, pixel_sample.sub(&self.center));
+    }
+
+    fn sample_square(self: *const Camera, rng: *Rng) Vec3 {
+        return Vec3::new(rng.gen_f64() - 0.5, rng.gen_f64() - 0.5, 0);
+    }
+
     fn render_worker(thread_args: *void) i64 {
         const args = thread_args as *RenderThreadArgs;
         const camera = args.camera;
+        const img = args.img;
+        const world = args.world;
+        var rng = Rng::new(@nanoTimestamp(), @nanoTimestamp());
         for (args.min..args.max) |j| {
             for (0..camera.image_width) |i| {
-                const pixel_center = camera.pixel00_loc
-                    .add(&camera.pixel_delta_u.muls(i))
-                    .add(&camera.pixel_delta_v.muls(j));
-                const ray_direction = pixel_center.sub(&camera.center);
-                const ray = Ray::new(camera.center, ray_direction);
-                const pixel_color = camera.ray_color(&ray, args.world);
-                draw_color(args.img, i, j, pixel_color);
+                camera.draw_pixel(img, world, i, j, &rng);
             }
         }
 
         return 0;
     }
-}
-
-fn draw_color(img: *const Image, x: i64, y: i64, pixel_color: Vec3) void {
-    const color = Color::new(
-        @floor(255.999 * ::PIXEL_INTENSITY.clamp(pixel_color.x)) as void as f64 as i64,
-        @floor(255.999 * ::PIXEL_INTENSITY.clamp(pixel_color.y)) as void as f64 as i64,
-        @floor(255.999 * ::PIXEL_INTENSITY.clamp(pixel_color.z)) as void as f64 as i64,
-        255
-    );
-    img.set_pixel(color, x, y);
 }
 
 struct RenderThreadArgs {

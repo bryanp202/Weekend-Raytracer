@@ -31,19 +31,26 @@ const IMAGE_WIDTH: i64 = 400;
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
 const FOCAL_LENGTH: f64 = 1.0;
 const VIEWPORT_HEIGHT: f64 = 2.0;
-const WORKER_THREADS: i64 = 4;
+const SAMPLES_PER_PIXEL: i64 = 10;
+const WORKER_THREADS: i64 = 8;
+const MAX_DEPTH: i64 = 10;
 
 fn main(argc: i64, argv: **const u8) i64 {
     const start = @nanoTimestamp();
     defer @printf("Time to run: %f secs", (@nanoTimestamp() - start) / 1_000_000_000.0);
 
-    const camera = Camera::new(IMAGE_WIDTH, ASPECT_RATIO, VIEWPORT_HEIGHT, FOCAL_LENGTH);
+    const camera = Camera::new(
+        IMAGE_WIDTH,
+        ASPECT_RATIO,
+        VIEWPORT_HEIGHT,
+        FOCAL_LENGTH,
+        SAMPLES_PER_PIXEL,
+        MAX_DEPTH
+    );
 
     var world = hittable::HittableList::new()
         .add(hittable::Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5).hittable())
         .add(hittable::Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0).hittable())
-        .add(hittable::Sphere::new(Vec3::new(10.0, 6.0, -5.2), 5.0).hittable())
-        .add(hittable::Sphere::new(Vec3::new(-0.8, 0.5, -0.9), 0.25).hittable())
         .hittable();
     defer world.free();
 

@@ -1,3 +1,5 @@
+use ::std::rand::Rng;
+
 pub struct Vec3 {
     x: f64;
     y: f64;
@@ -9,6 +11,40 @@ pub struct Vec3 {
         vec.y = y;
         vec.z = z;
         return vec;
+    }
+
+    pub fn random(rng: *Rng) Vec3 {
+        var vec: Vec3 = undefined;
+        vec.x = rng.gen_f64();
+        vec.y = rng.gen_f64();
+        vec.z = rng.gen_f64();
+        return vec;
+    }
+
+    pub fn random_range(rng: *Rng, min: f64, max: f64) Vec3 {
+        var vec: Vec3 = undefined;
+        vec.x = rng.range_f64(min, max);
+        vec.y = rng.range_f64(min, max);
+        vec.z = rng.range_f64(min, max);
+        return vec;
+    }
+
+    pub fn random_unit_vector(rng: *Rng) Vec3 {
+        while (true) {
+            const p = Vec3::random_range(rng, -1.0, 1.0);
+            const lensq = p.len_squared();
+            if (1e-160 < lensq and lensq <= 1.0) {
+                return p.divs(@sqrtf64(lensq));
+            }
+        }
+    }
+
+    pub fn random_on_hemisphere(rng: *Rng, normal: *const Vec3) Vec3 {
+        const on_unit_sphere = Vec3::random_unit_vector(rng);
+        if (on_unit_sphere.dot(normal) > 0.0)
+            return on_unit_sphere;
+        else
+            return on_unit_sphere.neg();
     }
 
     pub fn display(self: *const Vec3) void {
@@ -44,6 +80,7 @@ pub struct Vec3 {
         const t_inv = 1.0 / t;
         return Vec3::new(self.x * t_inv, self.y * t_inv, self.z * t_inv);
     }
+
     // Special ops
     pub fn dot(self: *const Vec3, other: *const Vec3) f64 {
         return self.x * other.x + self.y * other.y + self.z * other.z;

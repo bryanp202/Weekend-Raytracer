@@ -2,4 +2,5 @@
 A simple raytracer.
 
 # Example
-![Spheres](./assets/test.png)
+![Spheres](./assets/basic.png)
+![Diffuse](.//assets/diffuse.png)
