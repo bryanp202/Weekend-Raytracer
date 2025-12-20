@@ -77,10 +77,12 @@ pub struct Lambertian {
 
 pub struct Metal {
     albedo: Vec3;
+    fuzz: f64;
 
-    pub fn new(albedo: Vec3) Metal {
+    pub fn new(albedo: Vec3, fuzz: f64) Metal {
         var self: Metal = undefined;
         self.albedo = albedo;
+        self.fuzz = fuzz;
         return self;
     }
 
@@ -107,8 +109,67 @@ pub struct Metal {
         rng: *Rng
     ) bool {
         const reflected = r_in.dir.reflect(&rec.normal);
-        scattered.* = Ray::new(rec.p, reflected);
+        const fuzzed = reflected.unit_vector()
+            .add(&Vec3::random_unit_vector(rng).muls(self.fuzz));
+        scattered.* = Ray::new(rec.p, fuzzed);
         attenuation.* = self.albedo;
         return true;
+    }
+}
+
+pub struct Dieletric {
+    refraction_index: f64;
+
+    pub fn new(refraction_index: f64) Dieletric {
+        var self: Dieletric = undefined;
+        self.refraction_index = refraction_index;
+        return self;
+    }
+
+    pub fn free(self: *const Dieletric) void {}
+
+    pub fn material(self: *const Dieletric) Material {
+        const metal = @malloc(@sizeof(self.*)) as *Dieletric;
+        metal.* = self.*;
+
+        var mat: Material = undefined;
+        mat.ptr = metal as *void;
+        mat.scatterFn = Dieletric::scatter as fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool;
+        mat.freeFn = Dieletric::free as fn(*const void)void;
+
+        return mat;
+    }
+
+    pub fn scatter(
+        self: *const Dieletric,
+        r_in: *const Ray,
+        rec: *HitRecord,
+        attenuation: *Vec3,
+        scattered: *Ray,
+        rng: *Rng
+    ) bool {
+        attenuation.* = Vec3::new(1.0, 1.0, 1.0);
+        const ri = rec.front_face ? (1.0/self.refraction_index) : self.refraction_index;
+
+        const unit_direction = r_in.dir.unit_vector();
+        const dot = -unit_direction.dot(&rec.normal);
+        const cos_theta = dot < 1.0 ? dot : 1.0;
+        const sin_theta = @sqrtf64(1.0 - cos_theta*cos_theta);
+        var dir: Vec3 = undefined;
+
+        if (ri * sin_theta > 1.0 or Dieletric::reflectance(cos_theta, ri) > rng.gen_f64()) {
+            dir = unit_direction.reflect(&rec.normal);
+        } else {
+            dir = unit_direction.refract(&rec.normal, ri);
+        }
+
+        scattered.* = Ray::new(rec.p, dir);
+        return true;
+    }
+
+    fn reflectance(cosine: f64, refraction_index: f64) f64 {
+        const r0 = (1.0 - refraction_index) / (1 + refraction_index);
+        const r0_2 = r0 * r0;
+        return r0_2 + (1.0 - r0) * @pow(1.0 - cosine, 5.0);
     }
 }

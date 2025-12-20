@@ -20,6 +20,7 @@ use camera::Camera;
 use material::Material;
 use material::Lambertian;
 use material::Metal;
+use material::Dieletric;
 
 pub const PI: f64 = 3.1415926535897932385;
 pub const INFINITY: f64 = 1.7976931348623157e+308 + 1.7976931348623157e+308;
@@ -68,14 +69,16 @@ fn main(argc: i64, argv: **const u8) i64 {
     }
     materials.push(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)).material());
     materials.push(Lambertian::new(Vec3::new(0.1, 0.2, 0.5)).material());
-    materials.push(Metal::new(Vec3::new(0.8, 0.8, 0.8)).material());
-    materials.push(Metal::new(Vec3::new(0.8, 0.6, 0.2)).material());
+    materials.push(Dieletric::new(1.5).material());
+    materials.push(Dieletric::new(1.0 / 1.5).material());
+    materials.push(Metal::new(Vec3::new(0.8, 0.6, 0.2), 1.0).material());
 
     var world = hittable::HittableList::new()
         .add(hittable::Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, &materials.items[0]).hittable())
         .add(hittable::Sphere::new(Vec3::new(0.0, 0.0, -1.2), 0.5, &materials.items[1]).hittable())
         .add(hittable::Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, &materials.items[2]).hittable())
-        .add(hittable::Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, &materials.items[3]).hittable())
+        .add(hittable::Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.4, &materials.items[3]).hittable())
+        .add(hittable::Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, &materials.items[4]).hittable())
         .hittable();
     defer world.free();
 

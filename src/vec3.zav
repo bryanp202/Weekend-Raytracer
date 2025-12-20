@@ -103,4 +103,12 @@ pub struct Vec3 {
     pub fn reflect(self: *const Vec3, other: *const Vec3) Vec3 {
         return self.sub(&other.muls(2.0 * self.dot(other)));
     }
+    pub fn refract(self: *const Vec3, other: *const Vec3, etai_over_etat: f64) Vec3 {
+        const dot = -self.dot(other);
+        const cos_theta = dot < 1.0 ? dot : 1.0;
+        const r_out_perp = self.add(&other.muls(cos_theta)).muls(etai_over_etat);
+        const len_sqrd = 1.0 - r_out_perp.len_squared();
+        const r_out_parallel = other.muls(-@sqrtf64(len_sqrd >= 0.0 ? len_sqrd : -len_sqrd));
+        return r_out_perp.add(&r_out_parallel);
+    }
 }
