@@ -5,3 +5,4 @@ A simple raytracer.
 ![Spheres](./assets/basic.png)
 ![Diffuse](./assets/diffuse.png)
 ![Metals](./assets/metal.png)
+![Glass](./assets/glass.png)
