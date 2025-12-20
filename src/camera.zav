@@ -13,7 +13,6 @@ use ::hittable::HitRecord;
 use ::interval::Interval;
 
 pub struct Camera {
-    aspect_ratio: f64;
     image_width: i64;
     image_height: i64;
     center: Vec3;
@@ -23,27 +22,41 @@ pub struct Camera {
     samples_per_pixel: i64;
     pixel_samples_scale: f64;
     max_depth: i64;
+    defocus_angle: f64;
+    defocus_disk_u: Vec3;
+    defocus_disk_v: Vec3;
 
     pub fn new(
         image_width: i64,
         aspect_ratio: f64,
-        viewport_height: f64,
-        focal_length: f64,
         samples_per_pixel: i64,
-        max_depth: i64
+        max_depth: i64,
+        v_fov: f64,
+        look_from: Vec3,
+        look_at: Vec3,
+        v_up: Vec3,
+        defocus_angle: f64,
+        focus_dist: f64
     ) Camera {
         var self: Camera = undefined;
-        self.aspect_ratio = aspect_ratio;
         self.image_width = image_width;
         self.image_height = math::max_i64(1, (image_width / aspect_ratio) as i64);
+        self.pixel_samples_scale = 1.0 / samples_per_pixel;
+        self.center = look_from;
 
-        const viewport_height = viewport_height;
+        const theta = ::degrees_to_radians(v_fov);
+        const h = @tan(theta / 2.0);
+        const viewport_height = 2.0 * h * focus_dist;
         const viewport_width = viewport_height * (image_width as f64 / self.image_height as f64);
-        self.center = Vec3::new(0.0, 0.0, 0.0);
+
+        // Calculate the u,v,w unit basis vectors for the camera coordinate frame
+        const w = look_from.sub(&look_at).unit_vector();
+        const u = v_up.cross(&w).unit_vector();
+        const v = w.cross(&u);
 
         // Calculate the vectors across the horizontal and down the vertical viewport edges
-        const viewport_u = Vec3::new(viewport_width, 0.0, 0.0);
-        const viewport_v = Vec3::new(0.0, -viewport_height, 0.0);
+        const viewport_u = u.muls(viewport_width);
+        const viewport_v = v.neg().muls(viewport_height);
 
         // Calculate the horizontal and vertical delta vectors from pixel to pixel
         self.pixel_delta_u = viewport_u.divs(image_width);
@@ -51,14 +64,17 @@ pub struct Camera {
 
         // Calculate the position of the upper left pixel
         const viewport_upper_left = self.center
-            .sub(&Vec3::new(0.0, 0.0, focal_length))
+            .sub(&w.muls(focus_dist))
             .sub(&viewport_u.divs(2.0))
             .sub(&viewport_v.divs(2.0));
         self.pixel00_loc = viewport_upper_left
             .add(&self.pixel_delta_u.add(&self.pixel_delta_v).muls(0.5));
+        const defocus_radius = focus_dist * @tan(::degrees_to_radians(defocus_angle / 2.0));
+        self.defocus_disk_u = u.muls(defocus_radius);
+        self.defocus_disk_v = v.muls(defocus_radius);
 
+        self.defocus_angle = defocus_angle;
         self.samples_per_pixel = samples_per_pixel;
-        self.pixel_samples_scale = 1.0 / samples_per_pixel;
         self.max_depth = max_depth;
 
         return self;
@@ -166,11 +182,22 @@ pub struct Camera {
         const pixel_sample = self.pixel00_loc
             .add(&self.pixel_delta_u.muls(i + offset.x))
             .add(&self.pixel_delta_v.muls(j + offset.y));
-        return Ray::new(self.center, pixel_sample.sub(&self.center));
+
+        const ray_origin = (self.defocus_angle <= 0.0) ? self.center : self.defocus_disk_sample(rng);
+        return Ray::new(ray_origin, pixel_sample.sub(&ray_origin));
     }
 
     fn sample_square(self: *const Camera, rng: *Rng) Vec3 {
         return Vec3::new(rng.gen_f64() - 0.5, rng.gen_f64() - 0.5, 0);
+    }
+
+    fn defocus_disk_sample(self: *const Camera, rng: *Rng) Vec3 {
+        const p = Vec3::random_in_unit_disk(rng);
+        const offset = self.defocus_disk_u.muls(p.x)
+            .add(&self.defocus_disk_v.muls(p.y));
+        return self.center.add(&offset);
+            //.add(&self.defocus_disk_u.muls(p.x * 0.0)) Function chaining broken for some reason
+            //.add(&self.defocus_disk_v.muls(p.y * 0.0));
     }
 
     fn render_worker(thread_args: *void) i64 {

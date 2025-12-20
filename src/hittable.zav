@@ -108,6 +108,12 @@ pub struct HittableList {
         return list;
     }
 
+    pub fn with_capacity(capacity: u64) HittableList {
+        var list: HittableList = undefined;
+        list.objects = List::<Hittable>::with_capacity(capacity);
+        return list;
+    }
+
     pub fn free(self: *const HittableList) void {
         for (0..self.objects.len, self.objects.items) |_, obj| {
             obj.free();

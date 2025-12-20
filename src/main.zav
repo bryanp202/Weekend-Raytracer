@@ -10,11 +10,14 @@ use std::str::String;
 use std::image::Color;
 use std::image::Image;
 use std::collections::list::List;
+use std::rand::Rng;
 
 use ray::Ray;
 use vec3::Vec3;
 use hittable::Hittable;
 use hittable::HitRecord;
+use hittable::Sphere;
+use hittable::HittableList;
 use interval::Interval;
 use camera::Camera;
 use material::Material;
@@ -32,54 +35,89 @@ pub fn degrees_to_radians(degrees: f64) f64 {
 }
 
 const IMAGE_PATH: *const u8 = "test.bmp";
-const IMAGE_WIDTH: i64 = 400;
-const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const FOCAL_LENGTH: f64 = 1.0;
-const VIEWPORT_HEIGHT: f64 = 2.0;
-const SAMPLES_PER_PIXEL: i64 = 10;
 const WORKER_THREADS: i64 = 12;
-const MAX_DEPTH: i64 = 50;
+const IMAGE_WIDTH: i64 = 8_000;
+const ASPECT_RATIO: f64 = 16.0 / 9.0;
+const SAMPLES_PER_PIXEL: i64 = 20;
+const MAX_DEPTH: i64 = 500;
+const V_FOV: f64 = 20.0;
+
+const LOOK_FROM: Vec3 = Vec3::new(13.0, 2.0, 3.0);
+const LOOK_AT: Vec3 = Vec3::new(0.0, 0.0, 0.0);
+const V_UP: Vec3 = Vec3::new(0.0, 1.0, 0.0);
+const DEFOCUS_ANGLE: f64 = 0.4;
+const FOCUS_DIST: f64 = 10.0;
 
 fn main(argc: i64, argv: **const u8) i64 {
-    const malloc_start = @malloc(0);
-    defer {
-        const malloc_end = @malloc(0);
-        @printf("Heap leak size: %d\n", malloc_end as i64 - malloc_start as i64 - 32);
-        @free(malloc_start);
-        @free(malloc_end);
-    }
+    // const malloc_start = @malloc(0);
+    // defer {
+    //     const malloc_end = @malloc(0);
+    //     @printf("Heap leak size: %d\n", malloc_end as i64 - malloc_start as i64 - 32);
+    //     @free(malloc_start);
+    //     @free(malloc_end);
+    // }
     const start = @nanoTimestamp();
     defer @printf("Time to run: %f secs\n", (@nanoTimestamp() - start) / 1_000_000_000.0);
 
     const camera = Camera::new(
         IMAGE_WIDTH,
         ASPECT_RATIO,
-        VIEWPORT_HEIGHT,
-        FOCAL_LENGTH,
         SAMPLES_PER_PIXEL,
-        MAX_DEPTH
+        MAX_DEPTH,
+        V_FOV,
+        LOOK_FROM,
+        LOOK_AT,
+        V_UP,
+        DEFOCUS_ANGLE,
+        FOCUS_DIST
     );
 
-    var materials = List::<Material>::new();
+    var rng = Rng::new(@nanoTimestamp(), @nanoTimestamp());
+    var materials = List::<Material>::with_capacity(500 as u64);
     defer {
         for (0..materials.len, materials.items) |_, mat| {
             mat.free();
         }
         materials.free();
     }
-    materials.push(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)).material());
-    materials.push(Lambertian::new(Vec3::new(0.1, 0.2, 0.5)).material());
-    materials.push(Dieletric::new(1.5).material());
-    materials.push(Dieletric::new(1.0 / 1.5).material());
-    materials.push(Metal::new(Vec3::new(0.8, 0.6, 0.2), 1.0).material());
+    var world_builder = HittableList::with_capacity(500 as u64);
 
-    var world = hittable::HittableList::new()
-        .add(hittable::Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, &materials.items[0]).hittable())
-        .add(hittable::Sphere::new(Vec3::new(0.0, 0.0, -1.2), 0.5, &materials.items[1]).hittable())
-        .add(hittable::Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, &materials.items[2]).hittable())
-        .add(hittable::Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.4, &materials.items[3]).hittable())
-        .add(hittable::Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, &materials.items[4]).hittable())
-        .hittable();
+    materials.push(Lambertian::new(Vec3::new(0.5, 0.5, 0.5)).material());
+    world_builder.add(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0, &materials.items[0]).hittable());
+
+    for (-11..11) |a| {
+        for (-11..11) |b| {
+            const choose_mat = rng.gen_f64();
+            const center = Vec3::new(a + 0.9*rng.gen_f64(), 0.4, b + 0.9*rng.gen_f64());
+            var sphere_material: Material = undefined;
+
+            if ((center.sub(&Vec3::new(4.0, 0.2, 0.0))).len() > 0.9) {
+                if (choose_mat < 0.8) {
+                    const albedo = Vec3::random(&rng).mul(&Vec3::random(&rng));
+                    sphere_material = Lambertian::new(albedo).material();
+                } else if (choose_mat < 0.95) {
+                    const albedo = Vec3::random(&rng);
+                    const fuzz = rng.range_f64(0.0, 0.5);
+                    sphere_material = Metal::new(albedo, fuzz).material();
+                } else {
+                    sphere_material = Dieletric::new(1.5).material();
+                }
+                materials.push(sphere_material);
+                world_builder.add(Sphere::new(center, 0.2, &materials.items[materials.len - 1]).hittable());
+            }
+        }
+    }
+
+    materials.push(Dieletric::new(1.5).material());
+    world_builder.add(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0, &materials.items[materials.len - 1]).hittable());
+
+    materials.push(Lambertian::new(Vec3::new(0.4, 0.2, 0.1)).material());
+    world_builder.add(Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0, &materials.items[materials.len - 1]).hittable());
+
+    materials.push(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0).material());
+    world_builder.add(Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0, &materials.items[materials.len - 1]).hittable());
+
+    const world = world_builder.hittable();
     defer world.free();
 
     const export_result = camera.render(&world, IMAGE_PATH, WORKER_THREADS);

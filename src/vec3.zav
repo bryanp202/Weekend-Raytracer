@@ -20,7 +20,6 @@ pub struct Vec3 {
         vec.z = rng.gen_f64();
         return vec;
     }
-
     pub fn random_range(rng: *Rng, min: f64, max: f64) Vec3 {
         var vec: Vec3 = undefined;
         vec.x = rng.range_f64(min, max);
@@ -28,7 +27,6 @@ pub struct Vec3 {
         vec.z = rng.range_f64(min, max);
         return vec;
     }
-
     pub fn random_unit_vector(rng: *Rng) Vec3 {
         while (true) {
             const p = Vec3::random_range(rng, -1.0, 1.0);
@@ -38,13 +36,20 @@ pub struct Vec3 {
             }
         }
     }
-
     pub fn random_on_hemisphere(rng: *Rng, normal: *const Vec3) Vec3 {
         const on_unit_sphere = Vec3::random_unit_vector(rng);
         if (on_unit_sphere.dot(normal) > 0.0)
             return on_unit_sphere;
         else
             return on_unit_sphere.neg();
+    }
+    pub fn random_in_unit_disk(rng: *Rng) Vec3 {
+        while (true) {
+            const p = Vec3::new(rng.range_f64(-1.0, 1.0), rng.range_f64(-1.0, 1.0), 0.0);
+            if (p.x*p.x + p.y*p.y < 1.0) {
+                return p;
+            }
+        }
     }
 
     pub fn display(self: *const Vec3) void {
