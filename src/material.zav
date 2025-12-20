@@ -1,0 +1,114 @@
+use ::std::rand::Rng;
+
+use ::ray::Ray;
+use ::hittable::HitRecord;
+use ::vec3::Vec3;
+
+pub struct Material {
+    ptr: *void;
+    scatterFn: fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool;
+    freeFn: fn(*const void)void;
+
+    pub fn scatter(
+        self: *const Material,
+        r_in: *const Ray,
+        rec: *HitRecord,
+        attenuation: *Vec3,
+        scattered: *Ray,
+        rng: *Rng
+    ) bool {
+        return (self as *fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool)[1](
+            self.ptr,
+            r_in,
+            rec,
+            attenuation,
+            scattered,
+            rng
+        );
+    }
+
+    pub fn free(self: *const Material) void {
+        (self as *fn(*const void)bool)[2](self.ptr);
+        @free(self.ptr);
+    }
+}
+
+pub struct Lambertian {
+    albedo: Vec3;
+
+    pub fn new(albedo: Vec3) Lambertian {
+        var self: Lambertian = undefined;
+        self.albedo = albedo;
+        return self;
+    }
+
+    pub fn free(self: *const Lambertian) void {}
+
+    pub fn material(self: *const Lambertian) Material {
+        const lambertian = @malloc(@sizeof(self.*)) as *Lambertian;
+        lambertian.* = self.*;
+
+        var mat: Material = undefined;
+        mat.ptr = lambertian as *void;
+        mat.scatterFn = Lambertian::scatter as fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool;
+        mat.freeFn = Lambertian::free as fn(*const void)void;
+
+        return mat;
+    }
+
+    pub fn scatter(
+        self: *const Lambertian,
+        r_in: *const Ray,
+        rec: *HitRecord,
+        attenuation: *Vec3,
+        scattered: *Ray,
+        rng: *Rng
+    ) bool {
+        var scatter_direction = rec.normal.add(&Vec3::random_unit_vector(rng));
+        if (scatter_direction.near_zero()) {
+            scatter_direction = rec.normal;
+        }
+
+        scattered.* = Ray::new(rec.p, scatter_direction);
+        attenuation.* = self.albedo;
+        return true;
+    }
+}
+
+pub struct Metal {
+    albedo: Vec3;
+
+    pub fn new(albedo: Vec3) Metal {
+        var self: Metal = undefined;
+        self.albedo = albedo;
+        return self;
+    }
+
+    pub fn free(self: *const Metal) void {}
+
+    pub fn material(self: *const Metal) Material {
+        const metal = @malloc(@sizeof(self.*)) as *Metal;
+        metal.* = self.*;
+
+        var mat: Material = undefined;
+        mat.ptr = metal as *void;
+        mat.scatterFn = Metal::scatter as fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool;
+        mat.freeFn = Metal::free as fn(*const void)void;
+
+        return mat;
+    }
+
+    pub fn scatter(
+        self: *const Metal,
+        r_in: *const Ray,
+        rec: *HitRecord,
+        attenuation: *Vec3,
+        scattered: *Ray,
+        rng: *Rng
+    ) bool {
+        const reflected = r_in.dir.reflect(&rec.normal);
+        scattered.* = Ray::new(rec.p, reflected);
+        attenuation.* = self.albedo;
+        return true;
+    }
+}

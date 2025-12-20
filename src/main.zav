@@ -4,6 +4,7 @@ pub mod ray;
 pub mod hittable;
 pub mod interval;
 pub mod camera;
+pub mod material;
 
 use std::str::String;
 use std::image::Color;
@@ -16,6 +17,9 @@ use hittable::Hittable;
 use hittable::HitRecord;
 use interval::Interval;
 use camera::Camera;
+use material::Material;
+use material::Lambertian;
+use material::Metal;
 
 pub const PI: f64 = 3.1415926535897932385;
 pub const INFINITY: f64 = 1.7976931348623157e+308 + 1.7976931348623157e+308;
@@ -32,12 +36,19 @@ const ASPECT_RATIO: f64 = 16.0 / 9.0;
 const FOCAL_LENGTH: f64 = 1.0;
 const VIEWPORT_HEIGHT: f64 = 2.0;
 const SAMPLES_PER_PIXEL: i64 = 10;
-const WORKER_THREADS: i64 = 8;
-const MAX_DEPTH: i64 = 10;
+const WORKER_THREADS: i64 = 12;
+const MAX_DEPTH: i64 = 50;
 
 fn main(argc: i64, argv: **const u8) i64 {
+    const malloc_start = @malloc(0);
+    defer {
+        const malloc_end = @malloc(0);
+        @printf("Heap leak size: %d\n", malloc_end as i64 - malloc_start as i64 - 32);
+        @free(malloc_start);
+        @free(malloc_end);
+    }
     const start = @nanoTimestamp();
-    defer @printf("Time to run: %f secs", (@nanoTimestamp() - start) / 1_000_000_000.0);
+    defer @printf("Time to run: %f secs\n", (@nanoTimestamp() - start) / 1_000_000_000.0);
 
     const camera = Camera::new(
         IMAGE_WIDTH,
@@ -48,9 +59,23 @@ fn main(argc: i64, argv: **const u8) i64 {
         MAX_DEPTH
     );
 
+    var materials = List::<Material>::new();
+    defer {
+        for (0..materials.len, materials.items) |_, mat| {
+            mat.free();
+        }
+        materials.free();
+    }
+    materials.push(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)).material());
+    materials.push(Lambertian::new(Vec3::new(0.1, 0.2, 0.5)).material());
+    materials.push(Metal::new(Vec3::new(0.8, 0.8, 0.8)).material());
+    materials.push(Metal::new(Vec3::new(0.8, 0.6, 0.2)).material());
+
     var world = hittable::HittableList::new()
-        .add(hittable::Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5).hittable())
-        .add(hittable::Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0).hittable())
+        .add(hittable::Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, &materials.items[0]).hittable())
+        .add(hittable::Sphere::new(Vec3::new(0.0, 0.0, -1.2), 0.5, &materials.items[1]).hittable())
+        .add(hittable::Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, &materials.items[2]).hittable())
+        .add(hittable::Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, &materials.items[3]).hittable())
         .hittable();
     defer world.free();
 

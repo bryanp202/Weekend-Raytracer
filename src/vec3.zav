@@ -58,6 +58,11 @@ pub struct Vec3 {
     pub fn len_squared(self: *const Vec3) f64 {
         return self.x * self.x + self.y * self.y + self.z * self.z;
     }
+    pub fn near_zero(self: *const Vec3) bool {
+        return (self.x <= 1e-8 and self.x >= -1e-8)
+            and (self.y <= 1e-8 and self.y >= -1e-8)
+            and (self.z <= 1e-8 and self.z >= -1e-8);
+    }
 
     /* ARITHMETIC */
     pub fn neg(self: *const Vec3) Vec3 {
@@ -94,5 +99,8 @@ pub struct Vec3 {
     }
     pub fn unit_vector(self: *const Vec3) Vec3 {
         return self.divs(self.len());
+    }
+    pub fn reflect(self: *const Vec3, other: *const Vec3) Vec3 {
+        return self.sub(&other.muls(2.0 * self.dot(other)));
     }
 }

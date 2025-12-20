@@ -1,11 +1,14 @@
+use ::std::collections::list::List;
+
 use ::ray::Ray;
 use ::vec3::Vec3;
 use ::interval::Interval;
-use ::std::collections::list::List;
+use ::material::Material;
 
 pub struct HitRecord {
     p: Vec3;
     normal: Vec3;
+    mat: *const Material;
     t: f64;
     front_face: bool;
 
@@ -15,6 +18,7 @@ pub struct HitRecord {
     }
 }
 
+/// Takes ownership of ptr
 pub struct Hittable {
     ptr: *void;
     hitFn: fn(*const void,*const Ray,Interval,*HitRecord)bool;
@@ -43,11 +47,13 @@ pub struct Hittable {
 pub struct Sphere {
     center: Vec3;
     radius: f64;
+    mat: *const Material;
 
-    pub fn new(center: Vec3, radius: f64) Sphere {
+    pub fn new(center: Vec3, radius: f64, mat: *const Material) Sphere {
         var sphere: Sphere = undefined;
         sphere.center = center;
         sphere.radius = radius >= 0 ? radius : 0;
+        sphere.mat = mat;
         return sphere;
     }
 
@@ -88,6 +94,7 @@ pub struct Sphere {
         rec.p = r.at(root);
         const outward_normal = rec.p.sub(&self.center).divs(self.radius);
         rec.set_face_normal(r, &outward_normal);
+        rec.mat = self.mat;
         return true;
     }
 }

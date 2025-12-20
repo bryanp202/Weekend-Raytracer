@@ -128,11 +128,14 @@ pub struct Camera {
             pixel_color.y += c.y;
             pixel_color.z += c.z;
         }
+        const r = pixel_color.x > 0.0 ? @sqrtf64(pixel_color.x * self.pixel_samples_scale) : 0.0;
+        const g = pixel_color.y > 0.0 ? @sqrtf64(pixel_color.y * self.pixel_samples_scale) : 0.0;
+        const b = pixel_color.z > 0.0 ? @sqrtf64(pixel_color.z * self.pixel_samples_scale) : 0.0;
 
         const color = Color::new(
-            @floor(256.0 * ::PIXEL_INTENSITY.clamp(pixel_color.x * self.pixel_samples_scale)) as void as f64 as i64,
-            @floor(256.0 * ::PIXEL_INTENSITY.clamp(pixel_color.y * self.pixel_samples_scale)) as void as f64 as i64,
-            @floor(256.0 * ::PIXEL_INTENSITY.clamp(pixel_color.z * self.pixel_samples_scale)) as void as f64 as i64,
+            @floor(256.0 * ::PIXEL_INTENSITY.clamp(r)) as void as f64 as i64,
+            @floor(256.0 * ::PIXEL_INTENSITY.clamp(g)) as void as f64 as i64,
+            @floor(256.0 * ::PIXEL_INTENSITY.clamp(b)) as void as f64 as i64,
             255
         );
         img.set_pixel(color, i, j);
@@ -143,10 +146,13 @@ pub struct Camera {
             return Vec3::new(0.0, 0.0, 0.0);
 
         var rec: HitRecord = undefined;
-        if (world.hit(r, Interval::new(0.0, ::INFINITY), &rec)) {
-            const dir = Vec3::random_on_hemisphere(rng, &rec.normal);
-            const new_r = Ray::new(rec.p, dir);
-            return self.ray_color(&new_r, depth-1, world, rng).muls(0.5);
+        if (world.hit(r, Interval::new(0.001, ::INFINITY), &rec)) {
+            var scattered: Ray = undefined;
+            var attenuation: Vec3 = undefined;
+            if (rec.mat.scatter(r, &rec, &attenuation, &scattered, rng)) {
+                return attenuation.mul(&self.ray_color(&scattered, depth-1, world, rng));
+            }
+            return Vec3::new(0.0, 0.0, 0.0);
         }
 
         const unit_direction = r.dir.unit_vector();
