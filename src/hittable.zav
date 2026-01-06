@@ -21,8 +21,8 @@ pub struct HitRecord {
 /// Takes ownership of ptr
 pub struct Hittable {
     ptr: *void;
-    hitFn: fn(*const void,*const Ray,Interval,*HitRecord)bool;
-    freeFn: fn(*const void)void;
+    hit_fn: fn(*const void,*const Ray,Interval,*HitRecord)bool;
+    free_fn: fn(*const void)void;
 
     pub fn hit(
         self: *const Hittable,
@@ -30,7 +30,7 @@ pub struct Hittable {
         ray_t: Interval,
         hit_record: *HitRecord
     ) bool {
-        return self.hitFn(
+        return self.hit_fn(
             self.ptr,
             r,
             ray_t,
@@ -39,7 +39,7 @@ pub struct Hittable {
     }
 
     pub fn free(self: *const Hittable) void {
-        self.freeFn(self.ptr);
+        self.free_fn(self.ptr);
         @free(self.ptr);
     }
 }
@@ -65,8 +65,8 @@ pub struct Sphere {
 
         var hittable: Hittable = undefined;
         hittable.ptr = sphere as *void;
-        hittable.hitFn = Sphere::hit as fn(*const void,*const Ray,Interval,*HitRecord)bool;
-        hittable.freeFn = Sphere::free as fn(*const void)void;
+        hittable.hit_fn = Sphere::hit as fn(*const void,*const Ray,Interval,*HitRecord)bool;
+        hittable.free_fn = Sphere::free as fn(*const void)void;
         return hittable;
     }
 
@@ -132,8 +132,8 @@ pub struct HittableList {
 
         var hittable: Hittable = undefined;
         hittable.ptr = list as *void;
-        hittable.hitFn = HittableList::hit as fn(*const void,*const Ray,Interval,*HitRecord)bool;
-        hittable.freeFn = HittableList::free as fn(*const void)void;
+        hittable.hit_fn = HittableList::hit as fn(*const void,*const Ray,Interval,*HitRecord)bool;
+        hittable.free_fn = HittableList::free as fn(*const void)void;
         return hittable;
     }
 
