@@ -6,8 +6,8 @@ use ::vec3::Vec3;
 
 pub struct Material {
     ptr: *void;
-    scatterFn: fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool;
-    freeFn: fn(*const void)void;
+    scatter_fn: fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool;
+    free_fn: fn(*const void)void;
 
     pub fn scatter(
         self: *const Material,
@@ -17,7 +17,7 @@ pub struct Material {
         scattered: *Ray,
         rng: *Rng
     ) bool {
-        return self.scatterFn(
+        return self.scatter_fn(
             self.ptr,
             r_in,
             rec,
@@ -28,7 +28,7 @@ pub struct Material {
     }
 
     pub fn free(self: *const Material) void {
-        self.freeFn(self.ptr);
+        self.free_fn(self.ptr);
         @free(self.ptr);
     }
 }
@@ -50,8 +50,8 @@ pub struct Lambertian {
 
         var mat: Material = undefined;
         mat.ptr = lambertian as *void;
-        mat.scatterFn = Lambertian::scatter as fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool;
-        mat.freeFn = Lambertian::free as fn(*const void)void;
+        mat.scatter_fn = Lambertian::scatter as fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool;
+        mat.free_fn = Lambertian::free as fn(*const void)void;
 
         return mat;
     }
@@ -94,8 +94,8 @@ pub struct Metal {
 
         var mat: Material = undefined;
         mat.ptr = metal as *void;
-        mat.scatterFn = Metal::scatter as fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool;
-        mat.freeFn = Metal::free as fn(*const void)void;
+        mat.scatter_fn = Metal::scatter as fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool;
+        mat.free_fn = Metal::free as fn(*const void)void;
 
         return mat;
     }
@@ -134,8 +134,8 @@ pub struct Dieletric {
 
         var mat: Material = undefined;
         mat.ptr = metal as *void;
-        mat.scatterFn = Dieletric::scatter as fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool;
-        mat.freeFn = Dieletric::free as fn(*const void)void;
+        mat.scatter_fn = Dieletric::scatter as fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool;
+        mat.free_fn = Dieletric::free as fn(*const void)void;
 
         return mat;
     }
