@@ -17,7 +17,7 @@ pub struct Material {
         scattered: *Ray,
         rng: *Rng
     ) bool {
-        return (self as *fn(*const void,*const Ray,*HitRecord,*Vec3,*Ray,*Rng)bool)[1](
+        return self.scatterFn(
             self.ptr,
             r_in,
             rec,
@@ -28,7 +28,7 @@ pub struct Material {
     }
 
     pub fn free(self: *const Material) void {
-        (self as *fn(*const void)bool)[2](self.ptr);
+        self.freeFn(self.ptr);
         @free(self.ptr);
     }
 }

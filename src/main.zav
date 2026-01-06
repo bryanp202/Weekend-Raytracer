@@ -36,9 +36,9 @@ pub fn degrees_to_radians(degrees: f64) f64 {
 
 const IMAGE_PATH: *const u8 = "test.bmp";
 const WORKER_THREADS: i64 = 12;
-const IMAGE_WIDTH: i64 = 8_000;
+const IMAGE_WIDTH: i64 = 400;
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const SAMPLES_PER_PIXEL: i64 = 20;
+const SAMPLES_PER_PIXEL: i64 = 2;
 const MAX_DEPTH: i64 = 500;
 const V_FOV: f64 = 20.0;
 
