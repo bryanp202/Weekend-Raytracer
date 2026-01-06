@@ -30,7 +30,7 @@ pub struct Hittable {
         ray_t: Interval,
         hit_record: *HitRecord
     ) bool {
-        return (self as *fn(*const void,*const Ray,Interval,*HitRecord)bool)[1](
+        return self.hitFn(
             self.ptr,
             r,
             ray_t,
@@ -39,7 +39,7 @@ pub struct Hittable {
     }
 
     pub fn free(self: *const Hittable) void {
-        (self as *fn(*const void)bool)[2](self.ptr);
+        self.freeFn(self.ptr);
         @free(self.ptr);
     }
 }
