@@ -89,7 +89,7 @@ pub struct Image {
         ////// HEADER ///////
         const header_result = write_bmp_header(file_handle, self.width, self.height);
         if (header_result.is_err()) {
-            @fclose(file_handle);
+            @closeHandle(file_handle);
             @fdelete(path);
             return Result::<i64, IOError>::new_err(io::IOError::FailedToWrite);
         }
@@ -99,12 +99,12 @@ pub struct Image {
         var data_bytes_written = 0;
         const write_success = @fwrite(file_handle, self.buf as *u8, data_bytes, &data_bytes_written);
         if (!write_success or data_bytes_written != data_bytes) {
-            @fclose(file_handle);
+            @closeHandle(file_handle);
             @fdelete(path);
             return Result::<i64, IOError>::new_err(io::IOError::FailedToWrite);
         }
 
-        @fclose(file_handle);
+        @closeHandle(file_handle);
         const bytes_written = header_bytes_written + data_bytes_written;
         return Result::<i64, IOError>::new_ok(bytes_written);
     }

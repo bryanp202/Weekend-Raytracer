@@ -107,7 +107,7 @@ pub struct Camera {
             const arg = @malloc(@sizeof(temp)) as *RenderThreadArgs;
             arg.* = temp;
           
-            const handle = @spawn_thread(Camera::render_worker, arg as *void);
+            const handle = @createThread(Camera::render_worker, arg as *void);
             threads.push(handle);
             args.push(arg as *void);
         }
@@ -123,7 +123,7 @@ pub struct Camera {
 
         for (0..threads.len, threads.items) |i, thread| {
             @printf("Done\n");
-            @join(thread.*);
+            @waitOne(thread.*);
             @free(args.items[i]);
         }
 

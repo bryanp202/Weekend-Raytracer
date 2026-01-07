@@ -19,7 +19,7 @@ pub fn read_file(path: *const u8) Result<Bytes, IOError> {
     if (file == -1) {
         return Result::<Bytes, IOError>::new_err(IOError::FailedToOpen);
     }
-    defer @fclose(file);
+    defer @closeHandle(file);
 
     var file_len: u64 = 0 as u64;
     const read_file_size_success  = @fgetSize(file, &file_len);
