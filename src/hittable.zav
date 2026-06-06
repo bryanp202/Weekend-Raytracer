@@ -100,17 +100,17 @@ pub struct Sphere {
 }
 
 pub struct HittableList {
-    objects: List<Hittable>;
+    objects: List[Hittable];
 
     pub fn new() HittableList {
         var list: HittableList = undefined;
-        list.objects = List::<Hittable>::new();
+        list.objects = List::[Hittable]::new();
         return list;
     }
 
     pub fn with_capacity(capacity: u64) HittableList {
         var list: HittableList = undefined;
-        list.objects = List::<Hittable>::with_capacity(capacity);
+        list.objects = List::[Hittable]::with_capacity(capacity);
         return list;
     }
 

@@ -14,41 +14,41 @@ struct Bytes {
     }
 }
 
-pub fn read_file(path: *const u8) Result<Bytes, IOError> {
+pub fn read_file(path: *const u8) Result[Bytes, IOError] {
     const file = @fopen(path);
     if (file == -1) {
-        return Result::<Bytes, IOError>::new_err(IOError::FailedToOpen);
+        return Result::[Bytes, IOError]::new_err(IOError::FailedToOpen);
     }
     defer @closeHandle(file);
 
     var file_len: u64 = 0 as u64;
     const read_file_size_success  = @fgetSize(file, &file_len);
     if (!read_file_size_success) {
-        return Result::<Bytes, IOError>::new_err(IOError::FileEmpty);
+        return Result::[Bytes, IOError]::new_err(IOError::FileEmpty);
     }
 
     const file_buf = @malloc(file_len) as *u8;
     if (file_buf == nullptr) {
-        return Result::<Bytes, IOError>::new_err(IOError::OutOfMemory);
+        return Result::[Bytes, IOError]::new_err(IOError::OutOfMemory);
     }
 
     var bytes_read: u64 = 0 as u64;
     const read_success = @fread(file, file_buf, file_len, &bytes_read);
     if (!read_success or bytes_read != file_len) {
         @free(file_buf);
-        return Result::<Bytes, IOError>::new_err(IOError::FailedToRead);
+        return Result::[Bytes, IOError]::new_err(IOError::FailedToRead);
     }
 
-    return Result::<Bytes, IOError>::new_ok(Bytes::new(file_buf, bytes_read));
+    return Result::[Bytes, IOError]::new_ok(Bytes::new(file_buf, bytes_read));
 }
 
-pub fn open_file(path: *const u8) Result<i64, IOError> {
+pub fn open_file(path: *const u8) Result[i64, IOError] {
     var file_handle = @fcreate(path);
     if (file_handle == -1) {
         file_handle = @fopen(path);
         if (file_handle == -1) {
-            return Result::<i64, IOError>::new_err(IOError::FailedToOpen);
+            return Result::[i64, IOError]::new_err(IOError::FailedToOpen);
         }
     }
-    return Result::<i64, IOError>::new_ok(file_handle);
+    return Result::[i64, IOError]::new_ok(file_handle);
 }

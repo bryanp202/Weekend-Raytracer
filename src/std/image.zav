@@ -78,10 +78,10 @@ pub struct Image {
         }
     }
 
-    pub fn export_bmp(self: *const Image, path: *const u8) Result<i64, IOError> {
+    pub fn export_bmp(self: *const Image, path: *const u8) Result[i64, IOError] {
         const file_result = fs::open_file(path);
         if (file_result.is_err()) {
-            return Result::<i64, IOError>::new_err(file_result.unwrap_err());
+            return Result::[i64, IOError]::new_err(file_result.unwrap_err());
         }
 
         const file_handle = file_result.unwrap_ok();
@@ -91,7 +91,7 @@ pub struct Image {
         if (header_result.is_err()) {
             @closeHandle(file_handle);
             @fdelete(path);
-            return Result::<i64, IOError>::new_err(io::IOError::FailedToWrite);
+            return Result::[i64, IOError]::new_err(io::IOError::FailedToWrite);
         }
         const header_bytes_written = header_result.unwrap_ok();
 
@@ -101,16 +101,16 @@ pub struct Image {
         if (!write_success or data_bytes_written != data_bytes) {
             @closeHandle(file_handle);
             @fdelete(path);
-            return Result::<i64, IOError>::new_err(io::IOError::FailedToWrite);
+            return Result::[i64, IOError]::new_err(io::IOError::FailedToWrite);
         }
 
         @closeHandle(file_handle);
         const bytes_written = header_bytes_written + data_bytes_written;
-        return Result::<i64, IOError>::new_ok(bytes_written);
+        return Result::[i64, IOError]::new_ok(bytes_written);
     }
 }
 
-pub fn write_bmp_header(file_handle: i64, width: u32, height: u32) Result<i64, IOError> {
+pub fn write_bmp_header(file_handle: i64, width: u32, height: u32) Result[i64, IOError] {
     const info: [138]u8 = undefined;
     for (0.. @len(info), info) |_, ptr| {
         ptr.* = 0 as u8;
@@ -182,8 +182,8 @@ pub fn write_bmp_header(file_handle: i64, width: u32, height: u32) Result<i64, I
     var header_bytes_written = 0;
     const write_success = @fwrite(file_handle, &info[0], @len(info), &header_bytes_written);
     if (!write_success or header_bytes_written != @len(info)) {
-        return Result::<i64, IOError>::new_err(io::IOError::FailedToWrite);
+        return Result::[i64, IOError]::new_err(io::IOError::FailedToWrite);
     } else {
-        return Result::<i64, IOError>::new_ok(header_bytes_written);
+        return Result::[i64, IOError]::new_ok(header_bytes_written);
     }
 }

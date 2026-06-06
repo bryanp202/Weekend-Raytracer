@@ -35,17 +35,17 @@ pub fn degrees_to_radians(degrees: f64) f64 {
 }
 
 const IMAGE_PATH: *const u8 = "test.bmp";
-const WORKER_THREADS: i64 = 12;
+const WORKER_THREADS: i64 = 4;
 const IMAGE_WIDTH: i64 = 400;
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const SAMPLES_PER_PIXEL: i64 = 2;
+const SAMPLES_PER_PIXEL: i64 = 20;
 const MAX_DEPTH: i64 = 500;
 const V_FOV: f64 = 20.0;
 
 const LOOK_FROM: Vec3 = Vec3::new(13.0, 2.0, 3.0);
 const LOOK_AT: Vec3 = Vec3::new(0.0, 0.0, 0.0);
 const V_UP: Vec3 = Vec3::new(0.0, 1.0, 0.0);
-const DEFOCUS_ANGLE: f64 = 0.4;
+const DEFOCUS_ANGLE: f64 = 0.2;
 const FOCUS_DIST: f64 = 10.0;
 
 fn main(argc: i64, argv: **const u8) i64 {
@@ -73,7 +73,7 @@ fn main(argc: i64, argv: **const u8) i64 {
     );
 
     var rng = Rng::new(@nanoTimestamp(), @nanoTimestamp());
-    var materials = List::<Material>::with_capacity(500 as u64);
+    var materials = List::[Material]::with_capacity(500 as u64);
     defer {
         for (0..materials.len, materials.items) |_, mat| {
             mat.free();
