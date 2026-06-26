@@ -115,9 +115,6 @@ pub struct HittableList {
     }
 
     pub fn free(self: *const HittableList) void {
-        for (0..self.objects.len, self.objects.items) |_, obj| {
-            obj.free();
-        }
         self.objects.free();
     }
 

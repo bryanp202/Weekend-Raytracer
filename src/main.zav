@@ -35,10 +35,10 @@ pub fn degrees_to_radians(degrees: f64) f64 {
 }
 
 const IMAGE_PATH: *const u8 = "test.bmp";
-const WORKER_THREADS: i64 = 4;
+const WORKER_THREADS: i64 = 8;
 const IMAGE_WIDTH: i64 = 400;
 const ASPECT_RATIO: f64 = 16.0 / 9.0;
-const SAMPLES_PER_PIXEL: i64 = 20;
+const SAMPLES_PER_PIXEL: i64 = 4;
 const MAX_DEPTH: i64 = 500;
 const V_FOV: f64 = 20.0;
 
@@ -74,12 +74,7 @@ fn main(argc: i64, argv: **const u8) i64 {
 
     var rng = Rng::new(@nanoTimestamp(), @nanoTimestamp());
     var materials = List::[Material]::with_capacity(500 as u64);
-    defer {
-        for (0..materials.len, materials.items) |_, mat| {
-            mat.free();
-        }
-        materials.free();
-    }
+    defer materials.free();
     var world_builder = HittableList::with_capacity(500 as u64);
 
     materials.push(Lambertian::new(Vec3::new(0.5, 0.5, 0.5)).material());

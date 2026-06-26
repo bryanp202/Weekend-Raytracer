@@ -1,0 +1,525 @@
+def str = []u8;
+
+def str.cool = fn()
+
+def str {
+    def len = fn(self)usize {
+        self.len()
+    }
+}
+
+def std::fmt::format = fn(fmt: comptime []u8, )
+
+def Add = trait(Rhs: type = Self, Output: type = Self) {
+    x: i32, // ???
+    add: fn(self, other: Rhs) -> Output,
+}
+
+def Sub = trait(Rhs: type = Self, Output: type = Self) {
+    sub: fn(self, other: Rhs) -> Output;
+}
+
+def Display = trait {
+    display = fn(&self) -> String;
+}
+
+def Vec2 = fn(T: type[Add, Sub]) -> type[Add, Sub] {
+    struct {
+        x: T,
+        y: T,
+    }
+}
+
+def Vec2(i32).x = fn() -> () {
+    return;
+}
+
+def GVec2 = fn(S: fn(type[Add, Sub])type[Add, Sub], T: type[Add, Sub]) -> type[Add, Sub] {
+    struct {
+        x: S(T),
+        y: S(T),
+        z: T,
+    }
+}
+
+def GVec2(S: Vec2, T: i32).new = fn(x: S(T), y: S(T), z: T) -> Self {
+
+}
+
+def GVec2(
+    S: fn(type[Add, Sub])type[Add, Sub],
+    T: type[Add, Sub],
+).new = fn(
+    x: S(T),
+    y: S(T),
+    z: T,
+) -> Self {
+    Self { x, y, z }
+}
+
+def GVec2(
+    S: fn(type[Add, Sub, Display]),
+    T: type[Add, Sub, Display],
+) {
+    def new = fn(
+        x: S(T),
+        y: S(T),
+        z: T,
+    ) -> Self {
+        Self { x, y, z }
+    }
+
+    def Add = impl Add {
+        def add = fn(self, rhs) {
+            Self {
+                x: self.x + other.x,
+                y: self.y + other.y,
+                z: self.z + other.z,
+            }
+        }
+    }
+
+    def AddWeird = impl Add {
+        def add = fn(self, rhs) {
+            Self {
+                x: self.x + other.y,
+                x: self.y + other.x,
+                z: self.z + other.z,
+            }
+        }
+    }
+
+    def Display = impl Display {
+        def display = fn(&self) {
+            std.fmt.format("x: {}, y: {}, z: {}", self.x, self.y, self.z)
+        }
+    }
+}
+
+def mut Veci32.count = 100; 
+
+def Vec2i32.new = fn() -> Self {...}
+
+def Vec2(T: type[Add, Sub]) {
+    def mut cool: i32 = 100;
+
+    def new = fn(x: T, y: T) -> Self {
+        Self { x, y }
+    }
+
+    def add = fn(self, other: Self) -> Self {
+        self + other
+    }
+
+    def Add = impl Add {
+        fn(self, other: Self) -> Self {
+            Self {
+                x: self.x + other.x,
+                y: self.y + other.y,
+            }
+        }
+    }
+}
+
+def main = fn(argc: i64, argv: **u8) -> i64 {
+    let a = GVec2(Vec2, i32).new(Vec2.new(1i32, 2i32), Vec2.new(1i32, 2i32), 1i32);
+    let b = .new(.new(2i32, 3i32), .new(3i32, 4i32), 1i32);
+    let c = a.AddWeird.Add(b);
+
+    std.io.stdout().print(c.display());
+
+    let a = Vec2(i32)::new(1, 2);
+    let b = ::new(3, 4);
+    let c = a + b;
+    let d = ::add(a, b);
+    let e = ::Add.add(a, b);
+
+    assert_eq!(c, d);
+    assert_eq!(d, e);
+
+    return 0;
+}
+
+def root = fn(num: i32) -> i32 {
+    let kind: type(i32 | u32) = if num < 0 {
+        i32
+    } else {
+        u32
+    };
+
+    let min: i32 | u32 = kind.MIN;
+    std.math.root(kind, num + min).into(i32)
+}
+
+def root = fn(num: i32) -> i32 {
+    if num < 0 {
+        let min: i32 = i32.MIN;
+        std.math.root(i32, num + min)//.into(i32) no op
+    } else {
+        let min: u32 = u32.MIN;
+        std.math.root(i32, num + min).into(i32)
+    }
+}
+
+def Vec2.$Add = impl Add {
+    def add = fn(self, other) {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+}
+
+def Vec2(i32).*Vec2(i32) = {
+
+}
+
+def Vec2.simd {}
+
+def Vec2.simd.new = fn() -> Self { Self.Default.default() }
+def Vec2.Add = // Vec2.(std.ops.Add)
+def Vec2.(std.ops.Add) = 
+
+impl Add for Vec2()
+
+def Vec = fn(T: type, n: usize) -> type {
+    struct { items: [T; n] }
+}
+
+def test = fn(num: i32) -> i32 {
+    let T: type[u32.traits() & i32.traits()] = if num > 0 { u32 } else { i32 };
+
+    let a: T = 0;
+    a += 2;
+    let b = a.into();
+
+    return b
+}
+
+def test = fn(num: i32) -> i32 {
+    let T: type[u32.traits() & i32.traits()] = if num > 0 { u32 } else { i32 };
+
+    let b = tmp_test(num);
+    b
+}
+
+def tmp_test = fn(num: $T[u32.traits() & i32.traits()]) -> i32 {
+    let a: T = 0;
+    a += 2;
+    a.into()
+}
+
+def Expr = enum(_: type, N: u64) {
+    Int(i32) -> Self(i32, N),
+    Bool(bool) -> Self(bool, N),
+    Float(f32) -> Self(f32, N),
+    Vec([$T; N]) -> Self([$T; N], N),
+    Add(Self(i32), Self(i32)) -> Self(i32, N),
+    Eq(Self($T[Eq]), Self($T[Eq])) -> Self(bool, N),
+    If(Self(bool), Self($T), Self($T)) -> Self($T, N),
+};
+
+def ExprMaker = fn(n: u64) -> type {
+    enum(type) {
+        Int(i32)                            -> Self(i32),
+        Bool(bool)                          -> Self(bool),
+        Float(f32)                          -> Self(f32),
+        Vec([$T; n])                        -> Self([$T; n]),
+        Add(Self(i32), Self(i32))           -> Self(i32),
+        Eq(Self($T[Eq]), Self($T))          -> Self(bool),
+        If(Self(bool), Self($T), Self($T))  -> Self($T),
+    }
+}
+
+def Expr {
+    def Int = fn ()
+}
+
+Expr(i32) = enum {
+    Int(i32),
+    Add(Self(i32), Self(i32)),
+    If(XXXXXXX(bool), Self(i32), Self(i32)),
+}
+
+def Expr.eval = fn(self: Self(type[Add,Sub,Mul,Div]$T)) -> $T {
+    match self {
+        Self.Int(val) => val, // i32
+        Self.Bool(val) => val, // bool
+        Self.Float(val) => val, // f32
+        Self.Vec(val) => val, // [(i32 | bool | f32)]
+        Self.Add(lhs, rhs) => lhs.eval() + rhs.eval(), // i32
+        Self.Eq(lhs, rhs) => lhs.eval() == rhs.eval(), // bool
+        Self.If(condition, lhs, rhs) => if condition { lhs.eval() } else { rhs.eval() }, // (i32 | bool | f32 | [(i32 | bool | f32)])
+    }
+}
+
+def Expr.Cool {
+    // This is a namespace
+}
+
+// Does this make a namespace on its own, or do you have to declare a namespace?
+def Expr.Cool.wow = fn() {}
+
+def Expr = enum(_: type) {
+    Int(i32) -> Self(i32),
+    Bool(bool) -> Self(bool),
+    Float(f32) -> Self(f32),
+    Add(Self(i32), Self(i32)) -> Self(i32),
+    {type[Eq]$T} : Eq(Self($T), Self($T)) -> Self(bool),
+    {type$T} : If(Self(bool), Self($T), Self($T)) -> Self($T),
+}
+
+def add = fn (lhs: *($L: type[Add($R)]), rhs: *($R: type), out: *mut Vec($T, $N: u64)) -> () {
+    for i in 0..N {
+        out[i] = lhs + rhs;
+    }
+}
+
+def cool = fn($n: u64, cool: Vec($T: type, $n)) -> Vec($T, $n) {
+    recur()
+}
+
+def add = fn(Lhs: type[Add(Rhs)], Rhs: type) -> fn(Lhs,Rhs) -> Lhs {
+    fn(lhs: Lhs, rhs: Rhs) -> Lhs {
+        lhs + rhs
+    }
+}
+
+def add = fn(lhs: Lhs @ type[Add($Rhs)], rhs: Rhs @ type) -> $Lhs {
+    lhs + rhs
+}
+
+def Iterator = trait {
+    Item: type;
+    next: fn (*mut self) -> Item;
+}
+
+def _ = fn(
+    iter: I @ type[Iterator{Item: V @ type}],
+    f: type[Fn{Args: $V, Result: R @ type}],
+) -> Map($I, $R) {
+    ...
+}
+
+def _ = fn[I, V, R, F](
+    iter: I,
+    f: F,
+) -> Map[$I, $R]
+where:
+    I: Iterator[Item: V],
+    F: Fn[V, Result: R],
+{
+
+}
+
+def cool = fn[I, V, F, N](
+    iter: $I[Iterator[Item: $V]],
+    f: $F[Fn[V, Result: $R]],
+    vec: Vec($N: const usize),
+    vec2: Vec(N),
+    n: const usize,
+) -> Map[I, R] {
+    
+}
+
+def cool = fn[I, V, F, const N: usize](
+    iter: I[Iterator[Item: V]],
+    f: F[Fn[V, Result: R]],
+    vec: Vec(N),
+    vec2: Vec(N),
+    n: const usize,
+) -> Map[I, R] {
+    
+}
+
+def Vec(T) {
+    
+}
+
+def Vec = struct {
+    items: *$T,
+    len: usize,
+    capacity: usize,
+};
+
+def Vec[T: $T] {
+    def new = fn() -> Self {
+
+    }
+}
+
+def std.debug.print = fn(fmt: const []u8, ...args: $T[Display]) {
+    let a = Vec[i32].new();
+}
+
+def test = fn(num: i32) {
+    let A: type[i32 | i8] = if num > 2 {
+        i32
+    } else {
+        i8
+    };
+
+    std.debug.print("The number is: {d}", num);
+
+    let b: A = 0;
+
+    b as i32 * num
+}
+
+impl Iterator for Vec2 {
+    def Item = i32;
+
+    next: fn(*mut self) -> Item {
+
+    }
+}
+
+def main = fn() {
+    let result = Add(i32, i32)(1, 2);
+    let a: Expr(i32) = Expr.Int(10);
+    let b = match a {
+        Expr.Int(val) => val,
+        Expr.Add(Expr.Int(lhs), Expr.Int(rhs)) => lhs + rhs,
+        _ => panic(),
+    }
+}
+
+def eval = fn(expr: Expr($T: type)) -> $T {
+    let result: $T = match expr {
+        Expr.Int(val) => val,                           // Expr(i32)
+        Expr.Add(lhs, rhs) => eval(lhs) + eval(rhs),    // Expr(i32)
+        Expr.Bool(val) => val,                          // Expr(bool)
+        Expr.Eq(lhs, rhs) => eval(lhs) == eval(rhs),    // Expr(bool)
+    };
+
+    std.debug.print("The result was {}!\n", result);
+
+    result
+}
+
+let test: Expr(bool) = Expr.Eq(Expr.Int(1), Expr.Int(1));
+let test2: ExprMaker(10)(bool) = ExprMaker(10).Eq(.Int(1), .Int(1));
+def str = []u8;
+
+def str.cool = fn()
+
+def str {
+    def len = fn(self)usize {
+        self.len()
+    }
+}
+
+def Vec = fn(T: type) -> type {
+    struct {
+        items: *T,
+        len: usize,
+        capacity: usize,
+    }
+}
+
+def Vec(T: Display).OtherVec = fn(T: type) -> type {
+    struct { items: *T; len: u32; capacity: u32; } with {
+        // Methods and stuff
+    }
+}
+
+def Vec(T: Display) = {
+    def show = fn(&self) -> String {
+        self
+            .iter()
+            .fold(String.new(), |(as_str, item)| as_str.extended(item.to_string()))
+    }
+}
+
+impl Add(T: Display) Vec(T) {
+    output: Vec(T);
+
+    add: fn(&self, other: &Self) {
+
+    }
+}
+
+def Vec(T).OtherVec(X) {
+    def new = fn() -> Self {
+        Self { items: undefined, len: 0, capacity: 0 }
+    }
+}
+
+def a = struct {
+    items: *i32,
+    len: usize[x| 0 < x && x <= 10],
+    capacity: usize,
+}
+
+print("Hello, {s}! Would you like {d} {s}?", $["Bob", 10, "apples"]. $[1, 2, 3, 4, 5]);
+let a = {10, 11, 12};
+
+def print = fn[const F: &str, D: $[Display]](args: D){
+    inline for arg in args {
+
+    }
+}
+
+def sum = fn[R, N: $[Add[R, Result=R]]]sum(nums: N) {
+    let mut sum = 0;
+    for(inline) num in nums {
+        sum += num;
+    }
+    sum
+}
+
+let bob_print: Fn(&[u8]) -> () = &print["Hello, {s}!", $[&[u8]]];
+
+def sum = fn [N: $[1; Add[$1, Output=$1]]]
+(nums: N) {
+    let mut sum = nums[$0];
+    $for num in nums {
+        sum += num;
+    }
+    sum
+}
+
+def sum = fn [
+    N: $[2; Add[$1, Output=$1]],
+    P: $[1; Mul[N[$-1], Output=R]],
+    R,
+] (nums: N) {
+    let mut sum = nums[$0];
+    $for num in nums {
+        sum += num;
+    }
+    sum
+}
+
+def sum = fn [
+    N: $[2; Add[$1, Output=$1]],
+    P: $[1; Mul[N[-1], Output=R]],
+    R,
+] (
+    nums: N,
+    prods: P,
+    result: &mut R,
+) -> () {
+    let sum = $fold (curr, num) in nums {
+        curr + num
+    };
+
+    *result = $fold (curr = sum, num) in prods {
+        curr * num
+    };
+}
+
+def main = fn() {
+    let mut result;
+    sum(
+        $[1, 2, 2.4, 3, (1, 1), 0.001],
+        $[1.2, 2, 2u8, 20i32],
+        &mut result
+    );
+}
+
+def Vec = struct {
+
+};
+
+impl 

@@ -31,8 +31,12 @@ pub struct List[T] {
         self.capacity = capacity;
     }
 
-    /// Makes list invalid
     pub fn free(self: *const List[T]) void {
+        compif (self.items[0].free()) {
+            for (0..self.len, self.items) |_, item| {
+                item.free();
+            }
+        }
         @free(self.items);
     }
 
@@ -42,6 +46,11 @@ pub struct List[T] {
     }
 
     pub fn clear_retain_capacity(self: *List[T]) void {
+        compif (self.items[0].free()) {
+            for (0..self.len, self.items) |_, item| {
+                item.free();
+            }
+        }
         self.len = 0 as u64;
     }
 
@@ -107,7 +116,6 @@ pub struct List[T] {
             self.items[i] = old_item_ptr.*;
         }
         self.capacity = new_capacity;
-        @free(old_items);
     }
 
     fn resize_with_gap(self: *List[T], gap_index: u64) void {
